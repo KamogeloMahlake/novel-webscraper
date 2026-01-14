@@ -7,11 +7,7 @@ from title and chapter tuples. The module also contains a small script
 section that reads novels and chapters from a PostgreSQL database and
 generates EPUB files for each novel.
 """
-import os
-
-from dotenv import load_dotenv
-from ebooklib import epub
-import psycopg2 
+from ebooklib import epub 
 from bs4 import BeautifulSoup
 
 def text_to_html(text):
@@ -43,7 +39,6 @@ def html_to_text(html):
     return soup.get_text(separator="\n")
 
 
-load_dotenv()
 
 def create_epub(title, chapters):
     """
@@ -81,6 +76,12 @@ def main():
     Main script to export novels and chapters from a PostgreSQL database
     into individual EPUB files.
     """
+    from dotenv import load_dotenv
+    import psycopg2
+    import os
+
+    load_dotenv()
+
     psql = psycopg2.connect(
         host=os.getenv("DB_HOST"),
         database=os.getenv("DB_NAME"),
