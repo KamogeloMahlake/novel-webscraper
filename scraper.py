@@ -84,7 +84,7 @@ class FanfictionNet(Scraper):
         metadata = {
             "title": content.find("b").get_text(strip=True),
             "author": content.find("a").get_text(strip=True),
-            "decription": " ",
+            "description": " ",
             "img_url": None
         }
         return metadata
@@ -122,8 +122,10 @@ class FanfictionNet(Scraper):
         while True:
             try:
                 chapter_content = self.chapter(story_id, chapter_number)
+                print(f"Fetched chapter {chapter_number}")
                 sleep(self.rate_limit)
                 chapters.append((str(chapter_number), f"Chapter {chapter_number}", chapter_content))
+                print(f"Fetching chapter {chapter_number + 1}")
                 chapter_number += 1
             except Exception as e:
                 print(f"{e}")
