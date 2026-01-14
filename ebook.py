@@ -45,15 +45,6 @@ def html_to_text(html):
 
 load_dotenv()
 
-psql = psycopg2.connect(
-    host=os.getenv("DB_HOST"),
-    database=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    port=os.getenv("DB_PORT"),
-)
-cursor = psql.cursor()
-
 def create_epub(title, chapters):
     """
     Create an EPUB file from a title and an iterable of chapters.
@@ -85,18 +76,34 @@ def create_epub(title, chapters):
     print(f'Created EPUB: {title}.epub')
     
 
-cursor.execute("SELECT id, title FROM novel_novel")
-novels = cursor.fetchall()
-
-for (id, novel_title) in novels:
-    cursor.execute(
-        "SELECT title, content FROM novel_chapter WHERE novel_id = %s ORDER BY num",
-        (id,)
+def main():
+    """
+    Main script to export novels and chapters from a PostgreSQL database
+    into individual EPUB files.
+    """
+    psql = psycopg2.connect(
+        host=os.getenv("DB_HOST"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        port=os.getenv("DB_PORT"),
     )
+    cursor = psql.cursor()
+    cursor.execute("SELECT id, title FROM novel_novel")
+    novels = cursor.fetchall()
 
-    chapters = cursor.fetchall()
-    create_epub(novel_title, chapters)
+    for (id, novel_title) in novels:
+        cursor.execute(
+            "SELECT title, content FROM novel_chapter WHERE novel_id = %s ORDER BY num",
+            (id,)
+        )
+
+        chapters = cursor.fetchall()
+        create_epub(novel_title, chapters)
 
 
-cursor.close()
-psql.close()
+    cursor.close()
+    psql.close()
+
+if __name__ == "__main__":
+    main()
