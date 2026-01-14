@@ -281,7 +281,13 @@ class NovelBin(Scraper):
         Returns:
             tuple: A tuple containing (next_chapter element, chapter_num, title, content).
         """
-        page = self.fetch(url)
+        for _ in range(self.retry_attempts):
+            try:
+                page = self.fetch(url)
+                break
+            except Exception as e:
+                print(f"Attempt failed: {e}")
+                sleep(self.rate_limit * 2)
         soup = BeautifulSoup(page, "html.parser")
         content = soup.find("div", id="chr-content").get_text(separator="\n")
         
