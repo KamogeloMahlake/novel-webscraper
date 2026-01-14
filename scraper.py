@@ -46,6 +46,27 @@ class Scraper:
         response.raise_for_status()
         return response.content
     
+    def retry_fetch(self, url):
+        """
+        Fetch content from a URL with retry logic.
+        
+        Args:
+            url (str): The URL to fetch.
+            
+        Returns:
+            bytes: The response content.
+            
+        Raises:
+            Exception: If all retry attempts fail.
+        """
+        for _ in range(self.retry_attempts):
+            try:
+                return self.fetch(url)
+            except Exception as e:
+                print(f"Attempt failed: {e}")
+                sleep(self.rate_limit * 2)
+        raise Exception("Failed to fetch URL after multiple attempts.")
+    
     def close(self):
         """Close the scraper session."""
         self.scraper.close()
@@ -76,7 +97,7 @@ class FanfictionNet(Scraper):
             ValueError: If the story content cannot be found.
         """
         url = f"{self.base_url}/s/{story_id}"
-        reponse = self.fetch(url)
+        reponse = self.retry_fetch(url)
         soup = BeautifulSoup(reponse, self.parser)
         content = soup.find(id="content")
         if content is None:
@@ -104,16 +125,7 @@ class FanfictionNet(Scraper):
         )
         if story_id.lower() == 'exit':
             return None
-        for _ in range(self.retry_attempts):
-            try:
-                metadata = self.metadata(story_id)
-                break
-            except Exception as e:
-                print(f"Attempt failed: {e}")
-                last_exception = e
-                sleep(self.rate_limit)
-        else:
-            raise last_exception
+        metadata = self.metadata(story_id)
 
         chapters = []
         chapter_number = 1
@@ -148,15 +160,7 @@ class FanfictionNet(Scraper):
             ValueError: If chapter content cannot be found.
         """
         url = f"{self.base_url}/s/{story_id}/{chapter_number}"
-        for _ in range(self.retry_attempts):
-            try:
-                reponse = self.fetch(url)
-                break
-            except Exception as e:
-                print(f"Attempt failed: {e}")
-                sleep(self.rate_limit * 2)
-        else:
-            raise Exception("Failed to fetch chapter after multiple attempts.")
+        reponse = self.retry_fetch(url)
         
         soup = BeautifulSoup(reponse, self.parser)
 
@@ -189,7 +193,7 @@ class NovelBin(Scraper):
             str: The URL of the selected novel.
         """
         url = f"{self.base_url}/search?keyword={keyword.replace(' ', '+')}"
-        reponse =  self.fetch(url)
+        reponse = self.retry_fetch(url)
         links = BeautifulSoup(reponse, "html.parser").find_all(
             "h3", class_="novel-title"
         )
@@ -215,7 +219,7 @@ class NovelBin(Scraper):
         Returns:
             tuple: A tuple containing (metadata dict, next_chapter element).
         """
-        reponse = self.fetch(url)
+        reponse = self.retry_fetch(url)
         soup = BeautifulSoup(reponse, self.parser)
 
         title = soup.find("h3", class_="title").getText()
@@ -254,12 +258,9 @@ class NovelBin(Scraper):
         )
         if keyword.lower() == 'exit':
             return None
-        try:
-            metadata, next_chapter = self.metadata(self.search(keyword))
         
-        except Exception as e:
-            print(f"{e}")
-            return
+        
+        metadata, next_chapter = self.metadata(self.search(keyword))
         
         chapter_num = 0
         chapters = []
@@ -292,17 +293,8 @@ class NovelBin(Scraper):
         Returns:
             tuple: A tuple containing (next_chapter element, chapter_num, title, content).
         """
-        for _ in range(self.retry_attempts):
-            try:
-                page = self.fetch(url)
-                break
-            except Exception as e:
-                print(f"Attempt failed: {e}")
-                sleep(self.rate_limit * 2)
-
-        else:
-            raise Exception("Failed to fetch chapter after multiple attempts.")
-            
+        page = self.retry_fetch(url)
+    
         soup = BeautifulSoup(page, "html.parser")
         content = soup.find("div", id="chr-content").get_text(separator="\n")
         
