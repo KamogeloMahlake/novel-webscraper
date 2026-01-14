@@ -1,3 +1,10 @@
+"""
+Web scraper module for extracting novel content from various sources.
+
+This module provides classes for scraping novels from different websites,
+including FanfictionNet and NovelBin. It handles fetching, parsing, and
+organizing chapter content into structured formats.
+"""
 from bs4 import BeautifulSoup
 import cloudscraper
 from datetime import datetime
@@ -6,26 +13,68 @@ from time import sleep
 
 
 class Scraper:
+    """
+    Base scraper class for fetching and parsing web content.
+    
+    Attributes:
+        rate_limit (int): Delay in seconds between requests to avoid rate limiting.
+        parser (str): HTML parser to use with BeautifulSoup.
+        scraper: Cloudscraper instance for handling JavaScript-heavy sites.
+        retry_attempts (int): Number of retry attempts for failed requests.
+    """
     def __init__(self):
+        """Initialize the base scraper with default settings."""
         self.rate_limit =  2
         self.parser = "html.parser"
         self.scraper = cloudscraper.create_scraper()
         self.retry_attempts = 3
 
     def fetch(self, url):
+        """
+        Fetch content from a given URL.
+        
+        Args:
+            url (str): The URL to fetch.
+            
+        Returns:
+            bytes: The response content.
+            
+        Raises:
+            HTTPError: If the request returns an error status code.
+        """
         response = self.scraper.get(url)
         response.raise_for_status()
         return response.content
     
     def close(self):
+        """Close the scraper session."""
         self.scraper.close()
 
 class FanfictionNet(Scraper):
+    """
+    Scraper for FanfictionNet stories.
+    
+    Inherits from Scraper and provides methods to fetch story metadata
+    and chapter content from fanfiction.net.
+    """
     def __init__(self):
+        """Initialize FanfictionNet scraper with base URL."""
         super().__init__()
         self.base_url = "https://m.fanfiction.net"
     
     def metadata(self, story_id):
+        """
+        Extract metadata for a story from FanfictionNet.
+        
+        Args:
+            story_id (str): The story ID on FanfictionNet.
+            
+        Returns:
+            dict: Dictionary containing title, author, description, and image URL.
+            
+        Raises:
+            ValueError: If the story content cannot be found.
+        """
         url = f"{self.base_url}/s/{story_id}"
         reponse = self.fetch(url)
         soup = BeautifulSoup(reponse, self.parser)
@@ -41,6 +90,15 @@ class FanfictionNet(Scraper):
         return metadata
 
     def story(self):
+        """
+        Fetch an entire story including metadata and all chapters.
+        
+        Prompts user for story ID and fetches all available chapters
+        with retry logic.
+        
+        Returns:
+            dict: Dictionary with 'metadata' and 'chapters' keys, or None if user exits.
+        """
         story_id = input(
             "Enter story ID (or type 'exit' to quit): "
         )
@@ -73,6 +131,19 @@ class FanfictionNet(Scraper):
         return {"metadata": metadata, "chapters": chapters}
 
     def chapter(self, story_id, chapter_number):
+        """
+        Fetch a specific chapter from a story.
+        
+        Args:
+            story_id (str): The story ID.
+            chapter_number (int): The chapter number to fetch.
+            
+        Returns:
+            str: HTML string containing the chapter content.
+            
+        Raises:
+            ValueError: If chapter content cannot be found.
+        """
         url = f"{self.base_url}/s/{story_id}/{chapter_number}"
         reponse = self.fetch(url)
         
@@ -85,11 +156,27 @@ class FanfictionNet(Scraper):
         return str(chapter)
     
 class NovelBin(Scraper):
+    """
+    Scraper for NovelBin novels.
+    
+    Inherits from Scraper and provides methods to search, fetch metadata,
+    and scrape chapter content from novelbin.me.
+    """
     def __init__(self):
+        """Initialize NovelBin scraper with base URL."""
         super().__init__()
         self.base_url = "https://novelbin.me/"
 
     def search(self, keyword):
+        """
+        Search for novels by keyword on NovelBin.
+        
+        Args:
+            keyword (str): The search keyword.
+            
+        Returns:
+            str: The URL of the selected novel.
+        """
         url = f"{self.base_url}/search?keyword={keyword.replace(' ', '+')}"
         reponse =  self.fetch(url)
         links = BeautifulSoup(reponse, "html.parser").find_all(
@@ -108,6 +195,15 @@ class NovelBin(Scraper):
         return array[answer]
     
     def metadata(self, url):
+        """
+        Extract metadata for a novel from NovelBin.
+        
+        Args:
+            url (str): The novel URL on NovelBin.
+            
+        Returns:
+            tuple: A tuple containing (metadata dict, next_chapter element).
+        """
         reponse = self.fetch(url)
         soup = BeautifulSoup(reponse, self.parser)
 
@@ -134,6 +230,14 @@ class NovelBin(Scraper):
         }, next_chapter
 
     def story(self):
+        """
+        Fetch an entire novel including metadata and all chapters.
+        
+        Prompts user for search keyword and fetches all available chapters.
+        
+        Returns:
+            dict: Dictionary with 'metadata' and 'chapters' keys, or None if user exits.
+        """
         keyword = input(
             "Enter a keyword to search for novels (or type 'exit' to quit): "
         )
@@ -167,6 +271,16 @@ class NovelBin(Scraper):
         return {"metadata": metadata, "chapters": chapters}
     
     def chapter(self, url, chapter_num):
+        """
+        Fetch a specific chapter from a novel.
+        
+        Args:
+            url (str): The chapter URL.
+            chapter_num (int): The current chapter number.
+            
+        Returns:
+            tuple: A tuple containing (next_chapter element, chapter_num, title, content).
+        """
         page = self.fetch(url)
         soup = BeautifulSoup(page, "html.parser")
         content = soup.find("div", id="chr-content").get_text(separator="\n")
@@ -182,7 +296,15 @@ class NovelBin(Scraper):
         return next_chapter, chapter_num, title, str(self.text_to_html(content))
     
     def text_to_html(self, text):
+        """
+        Convert plain text to HTML paragraphs.
+        
+        Args:
+            text (str): Plain text with newline separators.
+            
+        Returns:
+            str: HTML string with text wrapped in <p> tags.
+        """
         array = text.split("\n")
         html = [f"<p>{s}</p>" for s in array]
         return "".join(html)
-    
