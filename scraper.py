@@ -109,6 +109,7 @@ class FanfictionNet(Scraper):
                 metadata = self.metadata(story_id)
                 break
             except Exception as e:
+                print(f"Attempt failed: {e}")
                 last_exception = e
                 sleep(self.rate_limit)
         else:
@@ -147,7 +148,15 @@ class FanfictionNet(Scraper):
             ValueError: If chapter content cannot be found.
         """
         url = f"{self.base_url}/s/{story_id}/{chapter_number}"
-        reponse = self.fetch(url)
+        for _ in range(self.retry_attempts):
+            try:
+                reponse = self.fetch(url)
+                break
+            except Exception as e:
+                print(f"Attempt failed: {e}")
+                sleep(self.rate_limit * 2)
+        else:
+            raise Exception("Failed to fetch chapter after multiple attempts.")
         
         soup = BeautifulSoup(reponse, self.parser)
 
@@ -290,6 +299,10 @@ class NovelBin(Scraper):
             except Exception as e:
                 print(f"Attempt failed: {e}")
                 sleep(self.rate_limit * 2)
+
+        else:
+            raise Exception("Failed to fetch chapter after multiple attempts.")
+            
         soup = BeautifulSoup(page, "html.parser")
         content = soup.find("div", id="chr-content").get_text(separator="\n")
         
