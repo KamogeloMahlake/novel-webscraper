@@ -1,4 +1,5 @@
-from scraper import NovelBin, FanfictionNet
+from src.core.novelbin import NovelBin
+from src.core.fanficnet import FanfictionNet  # Ensure this module exists and is correctly defined
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -41,7 +42,7 @@ def main():
             metadata = story["metadata"]
             chapters = story["chapters"]
 
-            insert_novel_query = "INSERT INTO novel_novel (title, creator, date, status, views, description) VALUES (%s, %s, %s, %s, %s, %s)"
+            insert_novel_query = "INSERT INTO novel_novel (title, creator, date, status, views, description, last_chapter_scraped) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"
             
             try:
                 cursor.execute(
@@ -52,7 +53,8 @@ def main():
                         datetime.today().strftime("%d %B %Y %H:%M"),
                         False,
                         0,
-                        metadata["description"]
+                        metadata["description"],
+                        story["last_chapter_scraped"],
                     ),
                 )
                 psql.commit()
