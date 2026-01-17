@@ -1,5 +1,6 @@
 from src.core.novelbin import NovelBin
 from src.core.fanficnet import FanfictionNet
+from src.core.ao3 import AO3
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -19,43 +20,52 @@ cursor = psql.cursor()
 
 def main():
     while True:
-        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. Exit")
-        choice = input("Enter 1, 2, or 3: ").strip()
+        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Exit")
+        choice = input("Enter 1, 2, 3 or 4: ").strip()
         if choice == "1":
             scraper = NovelBin()
 
         elif choice == "2":
             scraper = FanfictionNet()
-        
+
         elif choice == "3":
+            scraper = AO3()
+
+        elif choice == "4":
             print("Exiting the program.")
             return
         
         else:    
             print("Invalid choice. Please enter 1 or 2 or 3.")
             continue
-        
-        while True:
-            story = scraper.story()
+        try:
+            while True:
+                story = scraper.story()
 
-            if story is None:
-                print("Exiting the program.")
-                return
+                if story is None:
+                    print("Exiting the program.")
+                    scraper.close()
+                    return
 
-            metadata = story["metadata"]
-            chapters = story["chapters"]
-            last_chapter_href = story.get("last_chapter_scraped", None)
-            fanficnet_id = story.get("id", None)
-            
-            novel_id = add_novel(metadata, last_chapter_href, fanficnet_id)
+                metadata = story["metadata"]
+                chapters = story["chapters"]
+                last_chapter_href = story.get("last_chapter_scraped", None)
+                fanficnet_id = story.get("id", None)
+                
+                novel_id = add_novel(metadata, last_chapter_href, fanficnet_id)
 
-            for chapter_num, chapter_title, content in chapters:        
-                if novel_id:
-                    add_chapter(novel_id, chapter_title, chapter_num, content)
+                for chapter_num, chapter_title, content in chapters:        
+                    if novel_id:
+                        add_chapter(novel_id, chapter_title, chapter_num, content)
 
-            print(f"Finished scraping and storing '{metadata['title']}'. Press Enter to continue or type 'back' to return to main menu.")
-            if input().strip().lower() == 'back':
-                break    
+                print(f"Finished scraping and storing '{metadata['title']}'. Press Enter to continue or type 'back' to return to main menu.")
+                if input().strip().lower() == 'back':
+                    scraper.close()
+                    break
+        except KeyboardInterrupt:
+            print("\nScraping interrupted by user. Exiting the program.")
+            scraper.close()
+            return    
 
 def add_novel(novel_data, last_chapter_href=None, fanficnet_id=None):
     """
@@ -68,7 +78,7 @@ def add_novel(novel_data, last_chapter_href=None, fanficnet_id=None):
         int: The ID of the newly added novel.
     """
     try:
-        insert_novel_query = "INSERT INTO novel_novel (title, creator, date, status, views, description, last_chapter_scraped, fanficnet_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
+        insert_novel_query = "INSERT INTO novel_novel (title, creator, date, status, views, description, last_chapter_scraped, fanfic_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
         
         cursor.execute(
             insert_novel_query,
@@ -78,7 +88,7 @@ def add_novel(novel_data, last_chapter_href=None, fanficnet_id=None):
                 datetime.today().strftime("%d %B %Y %H:%M"),
                 False,
                 0,
-                novel_data["description"],
+                str(novel_data["description"]),
                 last_chapter_href, 
                 fanficnet_id,
             ),

@@ -128,4 +128,4 @@ class FanfictionNet(Scraper):
                 print(f"No more new chapters found: {e}")
                 break
 
-        return new_chapters
+        return (new_chapters,)

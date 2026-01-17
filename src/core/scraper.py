@@ -21,7 +21,7 @@ class Scraper:
     """
     def __init__(self):
         """Initialize the base scraper with default settings."""
-        self.rate_limit =  2
+        self.rate_limit =  1
         self.parser = "html.parser"
         self.scraper = cloudscraper.create_scraper()
         self.retry_attempts = 3
@@ -61,7 +61,7 @@ class Scraper:
                 return self.fetch(url)
             except Exception as e:
                 print(f"Attempt failed: {e}")
-                sleep(self.rate_limit * 2)
+                sleep(self.rate_limit * 10)
         raise Exception("Failed to fetch URL after multiple attempts.")
     
     def close(self):
