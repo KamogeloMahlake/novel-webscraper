@@ -76,7 +76,7 @@ class NovelBin(Scraper):
             "description": str(desc), 
         }, next_chapter
 
-    def story(self):
+    def story(self, url=None):
         """
         Fetch an entire novel including metadata and all chapters.
         
@@ -85,15 +85,17 @@ class NovelBin(Scraper):
         Returns:
             dict: Dictionary with 'metadata' and 'chapters' keys, or None if user exits.
         """
-        keyword = input(
+        if url is None:
+            keyword = input(
             "Enter a keyword to search for novels (or type 'exit' to quit): "
-        )
-        if keyword.lower() == 'exit':
-            return None
-        
-        
-        metadata, next_chapter = self.metadata(self.search(keyword))
-        
+            )
+            if keyword.lower() == 'exit':
+                return None
+            metadata, next_chapter = self.metadata(self.search(keyword))
+
+        else:
+            metadata, next_chapter = self.metadata(url)
+
         chapter_num = 0
         chapters = []
         sleep(self.rate_limit)
@@ -155,3 +157,37 @@ class NovelBin(Scraper):
         array = text.split("\n")
         html = [f"<p>{s}</p>" for s in array]
         return "".join(html)
+
+    def update(self, last_chapter_url, last_chapter_number):
+        """
+        Check for and fetch new chapters added to a novel since the last scrape.
+        
+        Args:
+            last_chapter_url (str): The URL of the last chapter scraped.
+            last_chapter_number (int): The last chapter number that was scraped.
+        Returns:
+            tuple: A tuple containing (list of new chapters, last_chapter_scraped element).
+        """
+        page = self.retry_fetch(last_chapter_url)
+        soup = BeautifulSoup(page, "html.parser")
+        next_chapter = soup.find("a", id="next_chap")
+        new_chapters = []
+
+        sleep(self.rate_limit)
+        
+        while "null" not in next_chapter["href"]:
+
+            try:
+                last_chapter_scraped = next_chapter
+
+                next_chapter, chapter_num, title, content = self.chapter(
+                    next_chapter["href"], last_chapter_number
+                )
+                print(f"Fetched new chapter {chapter_num}: {title}")
+                sleep(self.rate_limit)
+                new_chapters.append((str(chapter_num), title, content))
+                chapter_num += 1
+            except Exception as e:
+                print(f"{e}")
+                break
+        return new_chapters, last_chapter_scraped

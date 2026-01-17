@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+src/core/__pycache__/
+src/core/*.pyc

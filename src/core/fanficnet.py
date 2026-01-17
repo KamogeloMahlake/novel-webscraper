@@ -41,7 +41,7 @@ class FanfictionNet(Scraper):
         }
         return metadata
 
-    def story(self):
+    def story(self, story_id=None):
         """
         Fetch an entire story including metadata and all chapters.
         
@@ -51,11 +51,12 @@ class FanfictionNet(Scraper):
         Returns:
             dict: Dictionary with 'metadata' and 'chapters' keys, or None if user exits.
         """
-        story_id = input(
-            "Enter story ID (or type 'exit' to quit): "
-        )
-        if story_id.lower() == 'exit':
-            return None
+        if story_id is None:
+            story_id = input(
+                "Enter story ID (or type 'exit' to quit): "
+            )
+            if story_id.lower() == 'exit':
+                return None
         metadata = self.metadata(story_id)
 
         chapters = []
@@ -101,3 +102,30 @@ class FanfictionNet(Scraper):
         
         return str(chapter)
     
+    def update(self, story_id, last_chapter_number):
+        """
+        Check for and fetch new chapters added to a story since the last scrape.
+        Args:
+            story_id (str): The story ID.
+            last_chapter_number (int): The last chapter number that was scraped.
+        Returns:
+            list: List of tuples containing (chapter_num, chapter_title, content) for new chapters.
+        """
+        new_chapters = []
+        chapter_number = last_chapter_number + 1
+
+        sleep(self.rate_limit)
+
+        while True:
+            try:
+                chapter_content = self.chapter(story_id, chapter_number)
+                print(f"Fetched new chapter {chapter_number}")
+                sleep(self.rate_limit)
+                new_chapters.append((str(chapter_number), f"Chapter {chapter_number}", chapter_content))
+                print(f"Fetching chapter {chapter_number + 1}")
+                chapter_number += 1
+            except Exception as e:
+                print(f"No more new chapters found: {e}")
+                break
+
+        return new_chapters
