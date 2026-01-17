@@ -14,29 +14,30 @@ class AO3(Scraper):
         super().__init__()
         self.base_url = "https://archiveofourown.org"
     
-    def metadata(self, story_id):
+    def metadata(self, story_id, html=False):
         """
         Extract metadata for a story from AO3.
         
         Args:
             story_id (str): The story ID on AO3.
         """
-        url = f"{self.base_url}/works/{story_id}"
+        url = f"{self.base_url}/works/{story_id}?view_adult=true&amp;view_full_work=true"
+
         response = self.retry_fetch(url)
         soup = BeautifulSoup(response, self.parser)
-        try:
-            title = soup.find("h2", class_="title heading").get_text(strip=True)
-            author = soup.find("a", rel="author").get_text(strip=True)
-            description = soup.find("div", class_="summary module")
-        except AttributeError:
-            raise ValueError("Story not found or page structure has changed")
+        title = soup.find("h2", class_="title heading").get_text(strip=True)
+        author = soup.find("a", rel="author").get_text(strip=True)
+        description = soup.find("div", class_="summary module")
+        
         
         metadata = {
             "title": title,
             "author": author,
-            "description": description,
-            "img_url": None
+            "description": str(description),
+            "img_url": None,
         }
+        if html:
+            return metadata, soup
         return metadata
 
     def story(self, story_id=None):
@@ -55,26 +56,28 @@ class AO3(Scraper):
             )
             if story_id.lower() == 'exit':
                 return None
-        metadata = self.metadata(story_id)
-        sleep(self.rate_limit)
-        url = f"{self.base_url}/works/{story_id}?view_adult=true&amp;view_full_work=true"
-        response = self.retry_fetch(url)
-        soup = BeautifulSoup(response, self.parser)
-        chapter_divs = soup.find_all("div", class_="chapter")
+        try:
+            metadata, soup = self.metadata(story_id, html=True)
+        except Exception as e:
+            print(f"Error fetching metadata: {e}")
+            return None
+        
         chapters = []
         chapter_number = 1
-        print(len(chapter_divs))
-        for chapter_div in chapter_divs:
-            title_tag = chapter_div.find("h3", class_="title")
+
+        
+        while True:
+            chapter = soup.find("div", id=f"chapter-{chapter_number}")
+            if not chapter:
+                break
+            title_tag = chapter.find("h3", class_="title")
             title = title_tag.get_text(strip=True) if title_tag else f"Chapter {chapter_number}"
-            content = chapter_div.find("div", class_="userstuff")
+            content = chapter.find("div", class_="userstuff")
             chapters.append((str(chapter_number), title, content))
             print(f"Fetched chapter {chapter_number}: {title}")
             chapter_number += 1
-            sleep(self.rate_limit)
+            
         print("Scraping completed.")
-        print(metadata)
-        print(len(chapters))
         
         return {"metadata": metadata, "chapters": chapters, "id": story_id}
     

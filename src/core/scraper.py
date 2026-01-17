@@ -21,7 +21,7 @@ class Scraper:
     """
     def __init__(self):
         """Initialize the base scraper with default settings."""
-        self.rate_limit =  1
+        self.rate_limit =  2
         self.parser = "html.parser"
         self.scraper = cloudscraper.create_scraper()
         self.retry_attempts = 3
