@@ -1,6 +1,7 @@
 from src.core.novelbin import NovelBin
 from src.core.fanficnet import FanfictionNet
 from src.core.ao3 import AO3
+from src.core.kemono import Kemono
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -20,10 +21,10 @@ cursor = psql.cursor()
 
 def main():
     while True:
-        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Exit")
-        choice = input("Enter 1, 2, 3 or 4: ").strip()
+        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Kemono\n5. Exit")
+        choice = input("Enter 1, 2, 3, 4 or 5: ").strip()
         if choice == "1":
-            scraper = NovelBin()
+            scraper = NovelBin(1)
 
         elif choice == "2":
             scraper = FanfictionNet()
@@ -32,11 +33,16 @@ def main():
             scraper = AO3()
 
         elif choice == "4":
+            scraper = Kemono()
+            id = input("Enter Kemono User ID: ").strip()
+            return scraper.get_posts(id)
+
+        elif choice == "5":
             print("Exiting the program.")
             return
         
         else:    
-            print("Invalid choice. Please enter 1 or 2 or 3.")
+            print("Invalid choice. Please enter 1 or 2 or 3 or 4 or 5.")
             continue
         try:
             while True:

@@ -19,9 +19,9 @@ class Scraper:
         scraper: Cloudscraper instance for handling JavaScript-heavy sites.
         retry_attempts (int): Number of retry attempts for failed requests.
     """
-    def __init__(self):
+    def __init__(self, rate_limit=2):
         """Initialize the base scraper with default settings."""
-        self.rate_limit =  2
+        self.rate_limit = rate_limit
         self.parser = "html.parser"
         self.scraper = cloudscraper.create_scraper()
         self.retry_attempts = 3

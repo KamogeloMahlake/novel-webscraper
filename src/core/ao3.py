@@ -67,20 +67,35 @@ class AO3(Scraper):
 
         
         while True:
-            chapter = soup.find("div", id=f"chapter-{chapter_number}")
-            if not chapter:
+            try:
+                chapter_number, title, content = self.get_chapter(soup, chapter_number)
+                print(f"Fetched chapter {chapter_number}: {title}")
+                chapters.append((str(chapter_number), title, content))
+            except ValueError:
                 break
-            title_tag = chapter.find("h3", class_="title")
-            title = title_tag.get_text(strip=True) if title_tag else f"Chapter {chapter_number}"
-            content = chapter.find("div", class_="userstuff")
-            chapters.append((str(chapter_number), title, content))
-            print(f"Fetched chapter {chapter_number}: {title}")
-            chapter_number += 1
-            
+
         print("Scraping completed.")
         
         return {"metadata": metadata, "chapters": chapters, "id": story_id}
     
+    def get_chapter(self, soup, chapter_number):
+        """
+        Fetch a specific chapter from a story soup.
+        
+        Args:
+            soup (BeautifulSoup): The BeautifulSoup object of the story page.
+            chapter_number (int): The chapter number to fetch.
+        Returns:
+            tuple: A tuple containing (chapter_number, title, content).
+        """
+        chapter = soup.find("div", id=f"chapter-{chapter_number}")
+        if not chapter:
+            raise ValueError("Chapter not found")
+        title_tag = chapter.find("h3", class_="title")
+        title = title_tag.get_text(strip=True) if title_tag else f"Chapter {chapter_number}"
+        content = chapter.find("div", class_="userstuff")
+        return chapter_number + 1, title, content
+
     def chapter(self, url, chapter_number):
         """
         Fetch a specific chapter from a story.
@@ -102,35 +117,23 @@ class AO3(Scraper):
             raise ValueError("Chapter not found")
         return next_chapter_href, chapter_number + 1, title, content
 
-    def update(self, last_chapter_href, chapter_number):
+    def update(self, story_id, last_chapter_number):
         """
-        Check for updates to a story since the last scraped chapter.
-        
-        Args:
-            last_chapter_href (str): The href of the last chapter scraped.
-            chapter_number (int): The chapter number to start fetching from.
-        Returns:
-            dict: Dictionary with 'chapters' and 'last_chapter_scraped' keys.
+        Fetch new chapters from a story starting after the last scraped chapter.
         """
-        response = self.retry_fetch(last_chapter_href)
+        url = f"{self.base_url}/works/{story_id}?view_adult=true&amp;view_full_work=true"
+
+        response = self.retry_fetch(url)
         soup = BeautifulSoup(response, self.parser)
-        next_chapter = soup.find("li", class_="next")
-        if not next_chapter or not next_chapter.find("a"):
-            print("No new chapters found.")
-            return {"chapters": [], "last_chapter_scraped": last_chapter_href}
-        next_chapter_url = f"{self.base_url}{next_chapter.find('a')['href']}"
         chapters = []
-        sleep(self.rate_limit)
-        while next_chapter_url:
+        last_chapter_number += 1
+        while True:
             try:
-                last_chapter_href = next_chapter_url
-                next_chapter_url, chapter_number, title, content = self.chapter(next_chapter_url, chapter_number)
-                print(f"Fetched chapter {chapter_number}: {title}")
-                chapters.append((str(chapter_number), title, content))
-                print(f"Fetching chapter from {next_chapter_url}")
-                sleep(self.rate_limit)
-            except Exception as e:
-                print(f"{e}")
+                last_chapter_number, title, content = self.get_chapter(soup, last_chapter_number)
+                print(f"Fetched chapter {last_chapter_number}: {title}")
+                chapters.append((str(last_chapter_number), title, content))
+            except ValueError:
                 break
 
-        return chapters, last_chapter_href
+        print("Update completed.")
+        return chapters

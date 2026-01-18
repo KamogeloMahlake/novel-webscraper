@@ -9,9 +9,9 @@ class FanfictionNet(Scraper):
     Inherits from Scraper and provides methods to fetch story metadata
     and chapter content from fanfiction.net.
     """
-    def __init__(self):
+    def __init__(self, rate_limit=2):
         """Initialize FanfictionNet scraper with base URL."""
-        super().__init__()
+        super().__init__(rate_limit)
         self.base_url = "https://m.fanfiction.net"
     
     def metadata(self, story_id):

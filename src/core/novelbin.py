@@ -9,9 +9,9 @@ class NovelBin(Scraper):
     Inherits from Scraper and provides methods to search, fetch metadata,
     and scrape chapter content from novelbin.me.
     """
-    def __init__(self):
+    def __init__(self, rate_limit=2):
         """Initialize NovelBin scraper with base URL."""
-        super().__init__()
+        super().__init__(rate_limit)
         self.base_url = "https://novelbin.me/"
 
     def search(self, keyword):
@@ -100,7 +100,7 @@ class NovelBin(Scraper):
         chapters = []
         sleep(self.rate_limit)
 
-        while "null" not in next_chapter["href"]:
+        while True:
             try:
                 last_chapter_href = next_chapter["href"]
 
@@ -175,9 +175,12 @@ class NovelBin(Scraper):
 
         sleep(self.rate_limit)
         
-        while "null" not in next_chapter["href"]:
+        while True:
 
             try:
+                if "/null" in next_chapter["href"]:
+                    print("No new chapters found.")
+                    break
                 last_chapter_scraped = next_chapter
 
                 next_chapter, chapter_num, title, content = self.chapter(
