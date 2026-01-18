@@ -35,7 +35,7 @@ def main():
         elif choice == "4":
             scraper = Kemono()
             id = input("Enter Kemono User ID: ").strip()
-            return scraper.get_posts(id)
+            return scraper.posts(id)
 
         elif choice == "5":
             print("Exiting the program.")
