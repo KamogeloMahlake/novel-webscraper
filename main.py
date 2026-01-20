@@ -1,7 +1,7 @@
 from src.core.novelbin import NovelBin
 from src.core.fanficnet import FanfictionNet
 from src.core.ao3 import AO3
-from src.core.kemono import Kemono
+#from src.core.kemono import Kemono
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -33,10 +33,7 @@ def main():
             scraper = AO3()
 
         elif choice == "4":
-            scraper = Kemono()
-            id = input("Enter Kemono User ID: ").strip()
-            return scraper.posts(id)
-
+            return
         elif choice == "5":
             print("Exiting the program.")
             return

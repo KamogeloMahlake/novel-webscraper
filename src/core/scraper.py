@@ -7,7 +7,7 @@ organizing chapter content into structured formats.
 """
 import cloudscraper
 from time import sleep
-
+from fake_useragent import UserAgent
 
 class Scraper:
     """
@@ -23,7 +23,15 @@ class Scraper:
         """Initialize the base scraper with default settings."""
         self.rate_limit = rate_limit
         self.parser = "html.parser"
-        self.scraper = cloudscraper.create_scraper()
+        self.headers = {
+            "User-Agent": UserAgent().random
+        }
+        self.scraper = cloudscraper.create_scraper(
+            interpreter="nodejs",
+            delay=rate_limit,
+            browser={"browser": "chrome", "platform": "windows", "mobile": False
+            }
+        )
         self.retry_attempts = 3
 
     def fetch(self, url):
@@ -39,7 +47,7 @@ class Scraper:
         Raises:
             HTTPError: If the request returns an error status code.
         """
-        response = self.scraper.get(url)
+        response = self.scraper.get(url, headers=self.headers)
         response.raise_for_status()
         return response.content
     
@@ -61,7 +69,7 @@ class Scraper:
                 return self.fetch(url)
             except Exception as e:
                 print(f"Attempt failed: {e}")
-                sleep(self.rate_limit * 10)
+                sleep(self.rate_limit * 60)
         raise Exception("Failed to fetch URL after multiple attempts.")
     
     def close(self):

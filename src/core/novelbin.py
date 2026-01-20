@@ -12,7 +12,8 @@ class NovelBin(Scraper):
     def __init__(self, rate_limit=2):
         """Initialize NovelBin scraper with base URL."""
         super().__init__(rate_limit)
-        self.base_url = "https://novelbin.me/"
+        self.base_url = "https://novelbin.me"
+        self.last_chapter_scraped = None
 
     def search(self, keyword):
         """
@@ -102,8 +103,6 @@ class NovelBin(Scraper):
 
         while True:
             try:
-                last_chapter_href = next_chapter["href"]
-
                 next_chapter, chapter_num, title, content = self.chapter(
                 next_chapter["href"], chapter_num)
                 print(f"Fetched chapter {chapter_num}: {title}")
@@ -115,8 +114,8 @@ class NovelBin(Scraper):
                 print(f"{e}")
                 break
         print("Scraping completed.")    
-        print(f"{last_chapter_href} was the last chapter found.")
-        return {"metadata": metadata, "chapters": chapters, "last_chapter_scraped": last_chapter_href}
+        print(f"{self.last_chapter_scraped} was the last chapter found.")
+        return {"metadata": metadata, "chapters": chapters, "last_chapter_scraped": self.last_chapter_scraped}
     
     def chapter(self, url, chapter_num):
         """
@@ -135,11 +134,12 @@ class NovelBin(Scraper):
         content = soup.find("div", id="chr-content").get_text(separator="\n")
         
         try:
-            title = soup.find("span", class_="chr-text").getText()
+            title = soup.find("span", class_="chr-text").getText(strip=True)
         except TypeError:
-            title = soup.find("h2").getText()
+            title = soup.find("h2").getText(strip=True)
 
         chapter_num += 1
+        self.last_chapter_scraped = url
         next_chapter = soup.find("a", id="next_chap")
         
         return next_chapter, chapter_num, title, str(self.text_to_html(content))
