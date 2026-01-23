@@ -21,7 +21,7 @@ cursor = psql.cursor()
 
 def main():
     while True:
-        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Kemono\n5. Exit")
+        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Kemono\n5. Update\n6. Exit")
         choice = input("Enter 1, 2, 3, 4 or 5: ").strip()
         if choice == "1":
             scraper = NovelBin(1)
@@ -35,6 +35,12 @@ def main():
         elif choice == "4":
             return
         elif choice == "5":
+            cursor.execute("SELECT title, id, fanfic_id, last_chapter_scraped FROM novel_novel WHERE status = FALSE")
+            novels_to_update = cursor.fetchall()
+            update_novels(novels_to_update)
+            continue
+
+        elif choice == "6":
             print("Exiting the program.")
             return
         
@@ -69,6 +75,45 @@ def main():
             print("\nScraping interrupted by user. Exiting the program.")
             scraper.close()
             return    
+
+def update_novels(novels):
+    """
+    Updates existing novels in the database by scraping new chapters.
+    Args:
+        novels (list): A list of tuples containing novel ID, fanfic_id, and last_chapter_scraped.
+    """
+    novelbin = NovelBin(1)
+    fanficnet = FanfictionNet()
+    for title, novel_id, fanfic_id, last_chapter_scraped in novels:
+        print(f"Updating novel '{title}' (ID: {novel_id})...")
+        cursor.execute("SELECT MAX(num) FROM novel_chapter WHERE novel_id = %s", (novel_id,))
+        result = cursor.fetchone()
+        if result and result[0] is not None:
+            chapter_num = result[0]
+        else:
+            chapter_num = 0
+        
+        if fanfic_id:
+            chapters, fanficnet_id = fanficnet.update(fanfic_id, chapter_num)
+        elif last_chapter_scraped:
+            chapters, last_chapter_scraped = novelbin.update(last_chapter_scraped, chapter_num)
+        else:
+            print(f"No valid source information for novel ID {novel_id}. Skipping update.")
+            continue
+        if chapters:
+            if last_chapter_scraped:
+                cursor.execute(
+                    "UPDATE novel_novel SET last_chapter_scraped = %s WHERE id = %s",
+                    (last_chapter_scraped, novel_id)
+                )
+                psql.commit()
+            for chapter_num, chapter_title, content in chapters:
+                add_chapter(novel_id, chapter_title, chapter_num, content)
+            print(f"Updated novel ID {novel_id} with {len(chapters)} new chapters.")
+        else:
+            print(f"No new chapters found for novel ID {novel_id}.")
+
+    
 
 def add_novel(novel_data, last_chapter_href=None, fanficnet_id=None):
     """

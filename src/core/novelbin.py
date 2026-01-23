@@ -96,6 +96,7 @@ class NovelBin(Scraper):
 
         else:
             metadata, next_chapter = self.metadata(url)
+        self.last_chapter_scraped = None
 
         chapter_num = 0
         chapters = []
@@ -128,8 +129,10 @@ class NovelBin(Scraper):
         Returns:
             tuple: A tuple containing (next_chapter element, chapter_num, title, content).
         """
-        page = self.retry_fetch(url)
-    
+        try:
+            page = self.retry_fetch(url)
+        except Exception:
+            raise ValueError("Chapter not found")
         soup = BeautifulSoup(page, "html.parser")
         content = soup.find("div", id="chr-content").get_text(separator="\n")
         
@@ -168,6 +171,7 @@ class NovelBin(Scraper):
         Returns:
             tuple: A tuple containing (list of new chapters, last_chapter_scraped element).
         """
+        self.last_chapter_scraped = None
         page = self.retry_fetch(last_chapter_url)
         soup = BeautifulSoup(page, "html.parser")
         next_chapter = soup.find("a", id="next_chap")
@@ -181,16 +185,14 @@ class NovelBin(Scraper):
                 if "/null" in next_chapter["href"]:
                     print("No new chapters found.")
                     break
-                last_chapter_scraped = next_chapter
 
-                next_chapter, chapter_num, title, content = self.chapter(
+                next_chapter, last_chapter_number, title, content = self.chapter(
                     next_chapter["href"], last_chapter_number
                 )
-                print(f"Fetched new chapter {chapter_num}: {title}")
+                print(f"Fetched new chapter {last_chapter_number}: {title}")
                 sleep(self.rate_limit)
-                new_chapters.append((str(chapter_num), title, content))
-                chapter_num += 1
+                new_chapters.append((str(last_chapter_number), title, content))
             except Exception as e:
                 print(f"{e}")
                 break
-        return new_chapters, last_chapter_scraped
+        return new_chapters, self.last_chapter_scraped

@@ -27,10 +27,12 @@ class Scraper:
             "User-Agent": UserAgent().random
         }
         self.scraper = cloudscraper.create_scraper(
-            interpreter="nodejs",
-            delay=rate_limit,
-            browser={"browser": "chrome", "platform": "windows", "mobile": False
-            }
+            interpreter='js2py',
+            delay=5,
+           
+            browser='chrome',
+            debug=False
+
         )
         self.retry_attempts = 3
 
@@ -69,7 +71,7 @@ class Scraper:
                 return self.fetch(url)
             except Exception as e:
                 print(f"Attempt failed: {e}")
-                sleep(self.rate_limit * 60)
+                sleep(self.rate_limit * 10)
         raise Exception("Failed to fetch URL after multiple attempts.")
     
     def close(self):
