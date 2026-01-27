@@ -7,7 +7,6 @@ organizing chapter content into structured formats.
 """
 import cloudscraper
 from time import sleep
-from fake_useragent import UserAgent
 
 class Scraper:
     """
@@ -23,17 +22,14 @@ class Scraper:
         """Initialize the base scraper with default settings."""
         self.rate_limit = rate_limit
         self.parser = "html.parser"
-        self.headers = {
-            "User-Agent": UserAgent().random
-        }
+       
         self.scraper = cloudscraper.create_scraper(
             interpreter='js2py',
-            delay=5,
-           
-            browser='chrome',
+            delay=5,            
+            browser="chrome",
             debug=False
-
         )
+        
         self.retry_attempts = 3
 
     def fetch(self, url):
@@ -49,7 +45,8 @@ class Scraper:
         Raises:
             HTTPError: If the request returns an error status code.
         """
-        response = self.scraper.get(url, headers=self.headers)
+        
+        response = self.scraper.get(url)
         response.raise_for_status()
         return response.content
     

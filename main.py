@@ -21,9 +21,10 @@ cursor = psql.cursor()
 
 def main():
     while True:
-        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Kemono\n5. Update\n6. Exit")
+        print("Choose Site to Scrape From:\n1. NovelBin\n2. FanFiction.net\n3. AO3\n4. Kemono\n5. Update\n6. Update fanfic metadata \n7. Exit")
         choice = input("Enter 1, 2, 3, 4 or 5: ").strip()
         if choice == "1":
+            url = input("Enter NovelBin URL (or leave blank to search): ").strip()
             scraper = NovelBin(1)
 
         elif choice == "2":
@@ -35,12 +36,23 @@ def main():
         elif choice == "4":
             return
         elif choice == "5":
-            cursor.execute("SELECT title, id, fanfic_id, last_chapter_scraped FROM novel_novel WHERE status = FALSE")
-            novels_to_update = cursor.fetchall()
+            c = input("1. Update from NovelBin last chapter scraped\n2. Update from FanFiction.net ID\nChoose update method (1 or 2): ").strip()
+            if c == "1":
+                cursor.execute("SELECT title, id, fanfic_id, last_chapter_scraped FROM novel_novel WHERE last_chapter_scraped IS NOT NULL")
+                novels_to_update = [(t, i, f, l) for t, i, f, l in cursor.fetchall() if len(l) > 0]
+            elif c == "2":
+                cursor.execute("SELECT title, id, fanfic_id, last_chapter_scraped FROM novel_novel WHERE fanfic_id IS NOT NULL")
+                novels_to_update = cursor.fetchall()
+            #cursor.execute("SELECT title, id, fanfic_id, last_chapter_scraped FROM novel_novel WHERE status = FALSE")
+            
             update_novels(novels_to_update)
             continue
-
         elif choice == "6":
+            cursor.execute("SELECT id, fanfic_id FROM novel_novel WHERE fanfic_id IS NOT NULL")
+            novels_to_update = cursor.fetchall()
+            update_metadata(novels_to_update)
+            continue
+        elif choice == "7":
             print("Exiting the program.")
             return
         
@@ -49,7 +61,10 @@ def main():
             continue
         try:
             while True:
-                story = scraper.story()
+                if url and choice == "1":
+                    story = scraper.story(url)
+                else:
+                    story = scraper.story()
 
                 if story is None:
                     print("Exiting the program.")
@@ -75,6 +90,34 @@ def main():
             print("\nScraping interrupted by user. Exiting the program.")
             scraper.close()
             return    
+        
+def update_metadata(novels):
+    fanfic = FanfictionNet()
+    for novel_id, fanfic_id in novels:
+        try:
+
+            metadata = fanfic.old_metadata(fanfic_id)
+            if metadata:
+                cursor.execute(
+                    "UPDATE novel_novel SET description = %s WHERE id = %s",
+                    (
+                        str(metadata["description"]),
+                        novel_id
+                    )
+                )
+                print(metadata)
+                try:
+                    with open(f"./media/novel-images/{novel_id}.jpg", "wb") as f:
+                        img_data = requests.get(f"{fanfic.old_url}{metadata['img_url']}").content
+                        f.write(img_data)
+                    cursor.execute("UPDATE novel_novel SET novel_image = %s WHERE id = %s", (f"novel-images/{novel_id}.jpg", int(novel_id)))
+                except Exception as e:
+                    print(f"Failed to download or save image for novel ID {novel_id}: {e}")
+
+                psql.commit()
+                print(f"Updated metadata for novel ID {novel_id}.")
+        except Exception as e:
+            print(f"Failed to update metadata for novel ID {novel_id}: {e}")
 
 def update_novels(novels):
     """

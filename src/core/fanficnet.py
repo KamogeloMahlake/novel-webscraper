@@ -13,7 +13,31 @@ class FanfictionNet(Scraper):
         """Initialize FanfictionNet scraper with base URL."""
         super().__init__(rate_limit)
         self.base_url = "https://m.fanfiction.net"
+        self.old_url = "https://www.fanfiction.net"
     
+    def old_metadata(self, story_id):
+        """
+        Extract metadata for a story from the old FanfictionNet site.
+        
+        Args:
+            story_id (str): The story ID on FanfictionNet.
+            
+        """
+        url = f"{self.old_url}/s/{story_id}"
+        reponse = self.retry_fetch(url)
+        soup = BeautifulSoup(reponse, self.parser)
+        try:
+            return {
+            "title": soup.find("b", class_="xcontrast_txt").get_text(strip=True),
+            "author": soup.find("a", class_="xcontrast_txt").get_text(strip=True),
+            "description": soup.find("div", class_="xcontrast_txt"),
+            "img_url": soup.find("img", class_="cimage")["src"]
+        }
+        except Exception:
+            return None
+        
+        
+
     def metadata(self, story_id):
         """
         Extract metadata for a story from FanfictionNet.

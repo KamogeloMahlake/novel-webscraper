@@ -56,7 +56,10 @@ class NovelBin(Scraper):
         soup = BeautifulSoup(reponse, self.parser)
 
         title = soup.find("h3", class_="title").getText()
-        img = soup.find("img", class_="lazy")["data-src"]
+        try:
+            img = soup.find("img", class_="lazy")["data-src"]
+        except Exception:
+            img = None
         desc = soup.find("div", class_="desc-text")
 
         try:
