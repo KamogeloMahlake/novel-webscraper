@@ -12,7 +12,7 @@ class NovelBin(Scraper):
     def __init__(self, rate_limit=2):
         """Initialize NovelBin scraper with base URL."""
         super().__init__(rate_limit)
-        self.base_url = "https://novelbin.me"
+        self.base_url = "https://novelbin.com"
         self.last_chapter_scraped = None
 
     def search(self, keyword):

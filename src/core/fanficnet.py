@@ -15,35 +15,12 @@ class FanfictionNet(Scraper):
         self.base_url = "https://m.fanfiction.net"
         self.old_url = "https://www.fanfiction.net"
     
-    def old_metadata(self, story_id):
-        """
-        Extract metadata for a story from the old FanfictionNet site.
-        
-        Args:
-            story_id (str): The story ID on FanfictionNet.
-            
-        """
-        url = f"{self.old_url}/s/{story_id}"
-        reponse = self.retry_fetch(url)
-        soup = BeautifulSoup(reponse, self.parser)
-        try:
-            return {
-            "title": soup.find("b", class_="xcontrast_txt").get_text(strip=True),
-            "author": soup.find("a", class_="xcontrast_txt").get_text(strip=True),
-            "description": soup.find("div", class_="xcontrast_txt"),
-            "img_url": soup.find("img", class_="cimage")["src"]
-        }
-        except Exception:
-            return None
-        
-        
-
-    def metadata(self, story_id):
+    def metadata(self, story_id: int) -> dict:
         """
         Extract metadata for a story from FanfictionNet.
         
         Args:
-            story_id (str): The story ID on FanfictionNet.
+            story_id (int): The story ID on FanfictionNet.
             
         Returns:
             dict: Dictionary containing title, author, description, and image URL.
@@ -65,7 +42,7 @@ class FanfictionNet(Scraper):
         }
         return metadata
 
-    def story(self, story_id=None):
+    def story(self, story_id: int = None) -> dict:
         """
         Fetch an entire story including metadata and all chapters.
         
@@ -81,6 +58,13 @@ class FanfictionNet(Scraper):
             )
             if story_id.lower() == 'exit':
                 return None
+            
+            try:
+                story_id = int(story_id)
+            except ValueError:
+                print("Invalid story ID. Please enter a numeric ID.")
+                return None
+        
         metadata = self.metadata(story_id)
 
         chapters = []
@@ -101,12 +85,12 @@ class FanfictionNet(Scraper):
                 break
         return {"metadata": metadata, "chapters": chapters, "id": story_id}
 
-    def chapter(self, story_id, chapter_number):
+    def chapter(self, story_id: int, chapter_number: int) -> str:
         """
         Fetch a specific chapter from a story.
         
         Args:
-            story_id (str): The story ID.
+            story_id (int): The story ID.
             chapter_number (int): The chapter number to fetch.
             
         Returns:
@@ -125,12 +109,12 @@ class FanfictionNet(Scraper):
             raise ValueError("Chapter content not found")
         
         return str(chapter)
-    
-    def update(self, story_id, last_chapter_number):
+
+    def update(self, story_id: int, last_chapter_number: int) -> tuple[list[tuple], int]:
         """
         Check for and fetch new chapters added to a story since the last scrape.
         Args:
-            story_id (str): The story ID.
+            story_id (int): The story ID.
             last_chapter_number (int): The last chapter number that was scraped.
         Returns:
             list: List of tuples containing (chapter_num, chapter_title, content) for new chapters.
