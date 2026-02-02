@@ -121,10 +121,12 @@ class AO3(Scraper):
         """
         Fetch new chapters from a story starting after the last scraped chapter.
         """
-        url = f"{self.base_url}/works/{story_id}?view_adult=true&amp;view_full_work=true"
-
-        response = self.retry_fetch(url)
-        soup = BeautifulSoup(response, self.parser)
+        try:
+            _, soup = self.metadata(story_id, html=True)
+        except Exception as e:
+            print(f"Error fetching metadata: {e}")
+            return None
+        
         chapters = []
         last_chapter_number += 1
         while True:
